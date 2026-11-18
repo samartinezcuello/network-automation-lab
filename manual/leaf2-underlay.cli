@@ -1,0 +1,23 @@
+enter candidate
+set / interface ethernet-1/1 admin-state enable
+set / interface ethernet-1/1 subinterface 0 admin-state enable
+set / interface ethernet-1/1 subinterface 0 ipv4 admin-state enable
+set / interface ethernet-1/1 subinterface 0 ipv4 address 10.0.2.1/31
+set / interface system0 admin-state enable
+set / interface system0 subinterface 0 admin-state enable
+set / interface system0 subinterface 0 ipv4 admin-state enable
+set / interface system0 subinterface 0 ipv4 address 10.255.0.12/32
+set / network-instance default interface ethernet-1/1.0
+set / network-instance default interface system0.0
+set / routing-policy prefix-set loopbacks prefix 10.255.0.0/24 mask-length-range 32..32
+set / routing-policy policy export-loopbacks statement 10 match prefix prefix-set loopbacks
+set / routing-policy policy export-loopbacks statement 10 action policy-result accept
+set / routing-policy policy import-all default-action policy-result accept
+set / network-instance default protocols bgp autonomous-system 65002
+set / network-instance default protocols bgp router-id 10.255.0.12
+set / network-instance default protocols bgp afi-safi ipv4-unicast admin-state enable
+set / network-instance default protocols bgp group spine peer-as 65000
+set / network-instance default protocols bgp group spine export-policy [ export-loopbacks ]
+set / network-instance default protocols bgp group spine import-policy [ import-all ]
+set / network-instance default protocols bgp neighbor 10.0.2.0 peer-group spine
+commit now
