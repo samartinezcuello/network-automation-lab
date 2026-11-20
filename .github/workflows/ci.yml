@@ -1,0 +1,33 @@
+---
+name: ci
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    name: Lint and template tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install -r requirements.txt jinja2 pyyaml
+          ansible-galaxy collection install -r requirements.yml
+
+      - name: yamllint
+        run: yamllint playbooks inventory fabric.clab.yml .github
+
+      - name: ansible-lint
+        run: ansible-lint playbooks
+
+      - name: Templates vs golden configuration
+        run: python3 tests/test_templates.py

@@ -1,0 +1,200 @@
+[
+    {
+        "admin-state": "enable",
+        "subinterface": [
+            {
+                "admin-state": "enable",
+                "index": 0,
+                "ipv4": {
+                    "address": [
+                        {
+                            "ip-prefix": "10.0.2.1/31"
+                        }
+                    ],
+                    "admin-state": "enable"
+                }
+            }
+        ]
+    },
+    {
+        "admin-state": "enable",
+        "subinterface": [
+            {
+                "admin-state": "enable",
+                "index": 0,
+                "type": "srl_nokia-interfaces:bridged"
+            }
+        ]
+    },
+    {
+        "admin-state": "enable",
+        "subinterface": [
+            {
+                "admin-state": "enable",
+                "index": 0,
+                "ipv4": {
+                    "address": [
+                        {
+                            "ip-prefix": "10.255.0.12/32"
+                        }
+                    ],
+                    "admin-state": "enable"
+                }
+            }
+        ]
+    },
+    {
+        "vxlan-interface": [
+            {
+                "index": 1,
+                "ingress": {
+                    "vni": 111
+                },
+                "type": "srl_nokia-interfaces:bridged"
+            }
+        ]
+    },
+    {
+        "afi-safi": [
+            {
+                "admin-state": "enable",
+                "afi-safi-name": "srl_nokia-common:evpn"
+            },
+            {
+                "admin-state": "enable",
+                "afi-safi-name": "srl_nokia-common:ipv4-unicast"
+            }
+        ],
+        "autonomous-system": 65002,
+        "group": [
+            {
+                "afi-safi": [
+                    {
+                        "admin-state": "enable",
+                        "afi-safi-name": "srl_nokia-common:evpn"
+                    },
+                    {
+                        "admin-state": "disable",
+                        "afi-safi-name": "srl_nokia-common:ipv4-unicast"
+                    }
+                ],
+                "export-policy": [
+                    "accept-all"
+                ],
+                "group-name": "overlay",
+                "import-policy": [
+                    "accept-all"
+                ],
+                "peer-as": 65001
+            },
+            {
+                "export-policy": [
+                    "export-loopbacks"
+                ],
+                "group-name": "spine",
+                "import-policy": [
+                    "import-all"
+                ],
+                "peer-as": 65000
+            }
+        ],
+        "neighbor": [
+            {
+                "peer-address": "10.0.2.0",
+                "peer-group": "spine"
+            },
+            {
+                "multihop": {
+                    "admin-state": "enable",
+                    "maximum-hops": 5
+                },
+                "peer-address": "10.255.0.11",
+                "peer-group": "overlay",
+                "transport": {
+                    "local-address": "10.255.0.12"
+                }
+            }
+        ],
+        "router-id": "10.255.0.12"
+    },
+    {
+        "admin-state": "enable",
+        "interface": [
+            {
+                "name": "ethernet-1/2.0"
+            }
+        ],
+        "protocols": {
+            "bgp-evpn": {
+                "srl_nokia-bgp-evpn:bgp-instance": [
+                    {
+                        "admin-state": "enable",
+                        "evi": 111,
+                        "id": 1,
+                        "vxlan-interface": "vxlan1.1"
+                    }
+                ]
+            },
+            "srl_nokia-bgp-vpn:bgp-vpn": {
+                "bgp-instance": [
+                    {
+                        "id": 1,
+                        "route-target": {
+                            "export-rt": "target:100:111",
+                            "import-rt": "target:100:111"
+                        }
+                    }
+                ]
+            }
+        },
+        "type": "srl_nokia-network-instance:mac-vrf",
+        "vxlan-interface": [
+            {
+                "name": "vxlan1.1"
+            }
+        ]
+    },
+    {
+        "policy": [
+            {
+                "default-action": {
+                    "policy-result": "accept"
+                },
+                "name": "accept-all"
+            },
+            {
+                "name": "export-loopbacks",
+                "statement": [
+                    {
+                        "action": {
+                            "policy-result": "accept"
+                        },
+                        "match": {
+                            "prefix": {
+                                "prefix-set": "loopbacks"
+                            }
+                        },
+                        "name": "10"
+                    }
+                ]
+            },
+            {
+                "default-action": {
+                    "policy-result": "accept"
+                },
+                "name": "import-all"
+            }
+        ],
+        "prefix-set": [
+            {
+                "name": "loopbacks",
+                "prefix": [
+                    {
+                        "ip-prefix": "10.255.0.0/24",
+                        "mask-length-range": "32..32"
+                    }
+                ]
+            }
+        ]
+    }
+]
