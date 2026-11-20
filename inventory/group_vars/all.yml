@@ -1,0 +1,7 @@
+fabric:
+  spine_asn: 65000
+  access_interface: ethernet-1/2
+  vni: 111
+  evi: 111
+  route_target: "target:100:111"
+  loopback_prefix_set: 10.255.0.0/24

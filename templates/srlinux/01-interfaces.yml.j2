@@ -1,0 +1,35 @@
+---
+# Interfaces: uplink to the spine, access port to the host and the loopback (system0)
+- path: "/interface[name={{ uplink.interface }}]"
+  value:
+    admin-state: enable
+    subinterface:
+      - index: 0
+        admin-state: enable
+        ipv4:
+          admin-state: enable
+          address:
+            - ip-prefix: "{{ uplink.address }}"
+- path: "/interface[name={{ fabric.access_interface }}]"
+  value:
+    admin-state: enable
+    subinterface:
+      - index: 0
+        admin-state: enable
+        type: "srl_nokia-interfaces:bridged"
+- path: "/interface[name=system0]"
+  value:
+    admin-state: enable
+    subinterface:
+      - index: 0
+        admin-state: enable
+        ipv4:
+          admin-state: enable
+          address:
+            - ip-prefix: "{{ loopback }}"
+# Attach the routed interfaces to the default network-instance
+- path: "/network-instance[name=default]"
+  value:
+    interface:
+      - name: "{{ uplink.interface }}.0"
+      - name: "system0.0"

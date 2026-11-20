@@ -1,0 +1,28 @@
+- name: Capture the running configuration (reference for the templates)
+  hosts: srlinux
+  gather_facts: false
+  tasks:
+    - name: Get the relevant configuration subtrees
+      nokia.srlinux.get:
+        paths:
+          - path: /interface[name=ethernet-1/1]
+            datastore: running
+          - path: /interface[name=ethernet-1/2]
+            datastore: running
+          - path: /interface[name=system0]
+            datastore: running
+          - path: /tunnel-interface[name=vxlan1]
+            datastore: running
+          - path: /network-instance[name=default]/protocols/bgp
+            datastore: running
+          - path: /network-instance[name=mac-vrf-1]
+            datastore: running
+          - path: /routing-policy
+            datastore: running
+      register: running
+
+    - name: Save it to captured/
+      ansible.builtin.copy:
+        content: "{{ running.result | to_nice_json }}"
+        dest: "{{ playbook_dir }}/../captured/{{ inventory_hostname }}.json"
+      delegate_to: localhost

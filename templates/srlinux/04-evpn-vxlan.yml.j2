@@ -1,0 +1,30 @@
+---
+# VXLAN tunnel interface and the MAC-VRF that extends the L2 segment through EVPN
+- path: "/tunnel-interface[name=vxlan1]"
+  value:
+    vxlan-interface:
+      - index: 1
+        type: "srl_nokia-interfaces:bridged"
+        ingress:
+          vni: {{ fabric.vni }}
+- path: "/network-instance[name=mac-vrf-1]"
+  value:
+    type: "srl_nokia-network-instance:mac-vrf"
+    admin-state: enable
+    interface:
+      - name: "{{ fabric.access_interface }}.0"
+    vxlan-interface:
+      - name: vxlan1.1
+    protocols:
+      bgp-evpn:
+        "srl_nokia-bgp-evpn:bgp-instance":
+          - id: 1
+            admin-state: enable
+            evi: {{ fabric.evi }}
+            vxlan-interface: vxlan1.1
+      "srl_nokia-bgp-vpn:bgp-vpn":
+        bgp-instance:
+          - id: 1
+            route-target:
+              export-rt: "{{ fabric.route_target }}"
+              import-rt: "{{ fabric.route_target }}"

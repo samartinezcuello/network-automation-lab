@@ -44,6 +44,6 @@ Requires Docker and Containerlab (WSL2 on Windows works). The two SR Linux nodes
 
 - [x] Base topology (FRR spine, SR Linux leaves, hosts)
 - [x] Manual BGP underlay
-- [ ] Manual EVPN-VXLAN overlay
+- [x] Manual EVPN-VXLAN overlay
 - [ ] Automation with Ansible (data model, templates) and Python validation
 - [ ] CI: lint, deploy the lab, apply and validate

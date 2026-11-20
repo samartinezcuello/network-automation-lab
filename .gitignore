@@ -1,2 +1,4 @@
 clab-*/
 .clab*
+.venv/
+captured/

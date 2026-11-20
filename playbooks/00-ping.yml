@@ -1,0 +1,14 @@
+- name: Check JSON-RPC connectivity
+  hosts: srlinux
+  gather_facts: false
+  tasks:
+    - name: Get SR Linux version
+      nokia.srlinux.get:
+        paths:
+          - path: /system/information/version
+            datastore: state
+      register: version
+
+    - name: Show version
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} runs {{ version.result[0] }}"

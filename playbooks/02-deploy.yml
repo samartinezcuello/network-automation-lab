@@ -1,0 +1,37 @@
+---
+- name: Deploy the fabric configuration from the data model
+  hosts: srlinux
+  gather_facts: false
+
+  vars:
+    template_dir: "{{ playbook_dir }}/../templates/srlinux"
+    template_files:
+      - 01-interfaces.yml.j2
+      - 02-routing-policy.yml.j2
+      - 03-bgp.yml.j2
+      - 04-evpn-vxlan.yml.j2
+
+  tasks:
+    - name: Wait for the JSON-RPC server
+      nokia.srlinux.get:
+        paths:
+          - path: /system/information/version
+            datastore: state
+      register: ready
+      retries: 30
+      delay: 10
+      until: ready is succeeded
+
+    - name: Render the configuration from the templates
+      ansible.builtin.set_fact:
+        updates: "{{ updates | default([]) + (lookup('ansible.builtin.template', template_dir ~ '/' ~ item) | from_yaml) }}"
+      loop: "{{ template_files }}"
+
+    - name: Apply the configuration over JSON-RPC
+      nokia.srlinux.config:
+        update: "{{ updates }}"
+      register: applied
+
+    - name: Report
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }}: {{ 'configuration changed' if applied.changed else 'already in the desired state' }}"

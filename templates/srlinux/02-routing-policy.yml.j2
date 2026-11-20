@@ -1,0 +1,24 @@
+---
+# Policies: eBGP only advertises what a policy accepts
+- path: "/routing-policy"
+  value:
+    prefix-set:
+      - name: loopbacks
+        prefix:
+          - ip-prefix: "{{ fabric.loopback_prefix_set }}"
+            mask-length-range: "32..32"
+    policy:
+      - name: accept-all
+        default-action:
+          policy-result: accept
+      - name: import-all
+        default-action:
+          policy-result: accept
+      - name: export-loopbacks
+        statement:
+          - name: "10"
+            match:
+              prefix:
+                prefix-set: loopbacks
+            action:
+              policy-result: accept

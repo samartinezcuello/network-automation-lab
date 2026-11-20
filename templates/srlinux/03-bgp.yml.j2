@@ -1,0 +1,39 @@
+---
+# BGP: eBGP underlay with the spine and eBGP multihop EVPN overlay with the other leaf
+- path: "/network-instance[name=default]/protocols/bgp"
+  value:
+    autonomous-system: {{ asn }}
+    router-id: "{{ router_id }}"
+    afi-safi:
+      - afi-safi-name: "srl_nokia-common:ipv4-unicast"
+        admin-state: enable
+      - afi-safi-name: "srl_nokia-common:evpn"
+        admin-state: enable
+    group:
+      - group-name: spine
+        peer-as: {{ fabric.spine_asn }}
+        import-policy:
+          - import-all
+        export-policy:
+          - export-loopbacks
+      - group-name: overlay
+        peer-as: {{ overlay_peer.asn }}
+        import-policy:
+          - accept-all
+        export-policy:
+          - accept-all
+        afi-safi:
+          - afi-safi-name: "srl_nokia-common:evpn"
+            admin-state: enable
+          - afi-safi-name: "srl_nokia-common:ipv4-unicast"
+            admin-state: disable
+    neighbor:
+      - peer-address: "{{ uplink.spine_peer }}"
+        peer-group: spine
+      - peer-address: "{{ overlay_peer.address }}"
+        peer-group: overlay
+        transport:
+          local-address: "{{ router_id }}"
+        multihop:
+          admin-state: enable
+          maximum-hops: 5

@@ -19,10 +19,14 @@ topology:
       kind: linux
       image: alpine:latest
       cmd: sleep infinity
+      exec:
+        - ip addr add 192.168.100.1/24 dev eth1
     h2:
       kind: linux
       image: alpine:latest
       cmd: sleep infinity
+      exec:
+        - ip addr add 192.168.100.2/24 dev eth1
   links:
     - endpoints: ["spine1:eth1", "leaf1:e1-1"]
     - endpoints: ["spine1:eth2", "leaf2:e1-1"]

@@ -1,0 +1,10 @@
+asn: 65002
+router_id: 10.255.0.12
+loopback: 10.255.0.12/32
+uplink:
+  interface: ethernet-1/1
+  address: 10.0.2.1/31
+  spine_peer: 10.0.2.0
+overlay_peer:
+  address: 10.255.0.11
+  asn: 65001
