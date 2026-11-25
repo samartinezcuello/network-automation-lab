@@ -1,0 +1,22 @@
+---
+- name: Capture the operational state (reference for the validation)
+  hosts: srlinux
+  gather_facts: false
+  tasks:
+    - name: Get the operational state subtrees
+      nokia.srlinux.get:
+        paths:
+          - path: /network-instance[name=default]/protocols/bgp/neighbor
+            datastore: state
+          - path: /network-instance[name=mac-vrf-1]
+            datastore: state
+          - path: /tunnel-interface[name=vxlan1]
+            datastore: state
+      register: state
+
+    - name: Save it to captured/
+      ansible.builtin.copy:
+        content: "{{ state.result | to_nice_json }}"
+        dest: "{{ playbook_dir }}/../captured/state-{{ inventory_hostname }}.json"
+        mode: "0644"
+      delegate_to: localhost

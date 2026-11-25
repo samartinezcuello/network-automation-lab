@@ -1,0 +1,90 @@
+---
+- name: Data plane test between the hosts
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    source_container: clab-fabric-h1
+    target_ip: 192.168.100.2
+
+  tasks:
+    - name: Ping from h1 to h2 through the fabric
+      ansible.builtin.command: "docker exec {{ source_container }} ping -c 3 -W 2 {{ target_ip }}"
+      register: ping
+      retries: 5
+      delay: 3
+      until: ping.rc == 0
+      changed_when: false
+
+    - name: The hosts must reach each other
+      ansible.builtin.assert:
+        that: ping.rc == 0
+        success_msg: "{{ source_container }} reaches {{ target_ip }} through the EVPN-VXLAN fabric"
+
+- name: Validate the operational state against the data model
+  hosts: srlinux
+  gather_facts: false
+
+  tasks:
+    - name: Get the operational state
+      nokia.srlinux.get:
+        paths:
+          - path: /network-instance[name=default]/protocols/bgp/neighbor
+            datastore: state
+          - path: /network-instance[name=mac-vrf-1]
+            datastore: state
+          - path: /tunnel-interface[name=vxlan1]
+            datastore: state
+      register: state
+
+    - name: Pick the objects to validate
+      ansible.builtin.set_fact:
+        spine_neighbor: "{{ state.result[0].neighbor | selectattr('peer-address', 'equalto', uplink.spine_peer) | first }}"
+        overlay_neighbor: "{{ state.result[0].neighbor | selectattr('peer-address', 'equalto', overlay_peer.address) | first }}"
+        mac_vrf: "{{ state.result[1] }}"
+        vxlan: "{{ state.result[2]['vxlan-interface'] | first }}"
+
+    - name: Pick the details of each object
+      ansible.builtin.set_fact:
+        spine_ipv4: "{{ spine_neighbor['afi-safi'] | selectattr('afi-safi-name', 'equalto', 'srl_nokia-common:ipv4-unicast') | first }}"
+        overlay_evpn: "{{ overlay_neighbor['afi-safi'] | selectattr('afi-safi-name', 'equalto', 'srl_nokia-common:evpn') | first }}"
+        evpn_instance: "{{ mac_vrf.protocols['bgp-evpn']['srl_nokia-bgp-evpn:bgp-instance'] | first }}"
+        vpn_instance: "{{ mac_vrf.protocols['srl_nokia-bgp-vpn:bgp-vpn']['bgp-instance'] | first }}"
+        evpn_macs: "{{ mac_vrf['bridge-table']['srl_nokia-bridge-table-mac-table:mac-table']['mac'] | selectattr('type', 'equalto', 'evpn') | list }}"
+
+    - name: Underlay BGP session with the spine
+      ansible.builtin.assert:
+        that:
+          - spine_neighbor['session-state'] == 'established'
+          - spine_neighbor['peer-as'] == fabric.spine_asn
+          - spine_ipv4['active-routes'] >= groups['srlinux'] | length
+        success_msg: "{{ inventory_hostname }}: underlay established with the spine, {{ spine_ipv4['active-routes'] }} active routes"
+
+    - name: EVPN overlay session with the other leaf
+      ansible.builtin.assert:
+        that:
+          - overlay_neighbor['session-state'] == 'established'
+          - overlay_neighbor['peer-as'] == overlay_peer.asn
+          - overlay_evpn['oper-state'] == 'up'
+          - overlay_evpn['received-routes'] >= 1
+        success_msg: "{{ inventory_hostname }}: EVPN overlay established, {{ overlay_evpn['received-routes'] }} routes received"
+
+    - name: VXLAN tunnel and MAC-VRF match the model
+      ansible.builtin.assert:
+        that:
+          - mac_vrf['oper-state'] == 'up'
+          - vxlan['oper-state'] == 'up'
+          - vxlan.ingress.vni == fabric.vni
+          - evpn_instance['oper-state'] == 'up'
+          - evpn_instance.evi == fabric.evi
+          - vpn_instance['route-distinguisher'].rd == router_id ~ ':' ~ fabric.evi
+          - vpn_instance['route-target']['export-rt'] == fabric.route_target
+          - vpn_instance['route-target']['import-rt'] == fabric.route_target
+        success_msg: "{{ inventory_hostname }}: VNI {{ fabric.vni }} up, RD {{ vpn_instance['route-distinguisher'].rd }}, route target {{ fabric.route_target }}"
+
+    - name: The remote host MAC is learned through EVPN
+      ansible.builtin.assert:
+        that:
+          - evpn_macs | map(attribute='destination') | select('search', 'vtep:' ~ overlay_peer.address ~ ' vni:' ~ fabric.vni) | list | length >= 1
+        success_msg: "{{ inventory_hostname }}: {{ evpn_macs | length }} MAC(s) learned through EVPN from {{ overlay_peer.address }}"
